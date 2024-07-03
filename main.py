@@ -66,9 +66,9 @@ async def inline_handler(query: InlineQuery):
 async def upload_gif():
     global file_ids
     await create_gif()
-    gif_file = FSInputFile('/home/anton/Desktop/kak_ze_zaebalo_date_time/new.gif')
-    msg = await bot.send_video(chat_id=173202775, video=gif_file)
-    file_id = msg.video.file_id
+    gif_file = FSInputFile('./new.gif')
+    msg = await bot.send_animation(chat_id=173202775, animation=gif_file)
+    file_id = msg.animation.file_id
     file_ids.append(file_id)
 
 
