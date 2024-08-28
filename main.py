@@ -111,7 +111,7 @@ async def inline_handler(query: InlineQuery):
         # gif_file_id='BAACAgIAAxkDAAN5ZoRC6Z1Hzr1sCgRr-nZ3UV7xHfUAAu1aAAKCliBIvV332wxCEfs1BA'
         gif_file_id=file_datetime_ids[-1]
     )
-    await bot.answer_inline_query(query.id, results=[item1, item2], cache_time=1)
+    await bot.answer_inline_query(query.id, results=[item1, item2], cache_time=3)
 
 # async def upload_gif():
 #     await upload_date()
