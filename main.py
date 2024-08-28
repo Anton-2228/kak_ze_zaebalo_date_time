@@ -9,7 +9,7 @@ from aiogram import Bot, Dispatcher, Router
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import FSInputFile, InlineQuery, InlineQueryResultCachedGif
 
-API_TOKEN = ''
+API_TOKEN = '7268779699:AAGITXxUBXUBEHSwXT7LPL5JHhUp5B7FjQw'
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
