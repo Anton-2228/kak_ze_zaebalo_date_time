@@ -10,6 +10,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo, available_timezones
 
 from aiogram import Bot, Dispatcher, F
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.types import (
     BufferedInputFile,
     InlineQuery,
@@ -137,6 +138,9 @@ async def on_private_message(message: Message) -> None:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    # Пустой TELEGRAM_PROXY — прямое соединение.
+    session = AiohttpSession(proxy=os.getenv("TELEGRAM_PROXY") or None)
     dp.run_polling(
-        Bot(os.environ["BOT_TOKEN"]), storage_chat_id=int(os.environ["STORAGE_CHAT_ID"])
+        Bot(os.environ["BOT_TOKEN"], session=session),
+        storage_chat_id=int(os.environ["STORAGE_CHAT_ID"]),
     )

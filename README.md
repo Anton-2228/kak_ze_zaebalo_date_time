@@ -11,7 +11,10 @@
 3. Скопируйте `.env.example` в `.env` и заполните:
    - `BOT_TOKEN` — токен от BotFather;
    - `STORAGE_CHAT_ID` — ваш user id (подскажет, например, [@userinfobot](https://t.me/userinfobot));
-   - `TZ` — часовой пояс для тех, кто не настроил свой, по умолчанию `Europe/Moscow`.
+   - `TZ` — часовой пояс для тех, кто не настроил свой, по умолчанию `Europe/Moscow`;
+   - `TELEGRAM_PROXY` — прокси до `api.telegram.org` (`socks5://user:password@host:1080`),
+     если сервер не достаёт до Telegram напрямую. Без него бот перезапускается по кругу
+     с ошибкой `Request timeout error`.
 4. Запустите: `docker compose up -d --build`
 
 Логи: `docker compose logs -f`
