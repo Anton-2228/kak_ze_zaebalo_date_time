@@ -1,6 +1,7 @@
 FROM python:3.14-slim
-# Подпись берёт локальное время контейнера; пояс переопределяется через TZ в .env
-ENV TZ=Europe/Moscow
+# TZ — пояс для тех, кто не настроил свой; переопределяется в .env
+ENV TZ=Europe/Moscow DB_PATH=/data/zones.db
+RUN mkdir /data && chown nobody /data
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

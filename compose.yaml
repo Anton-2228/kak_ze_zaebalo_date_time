@@ -3,3 +3,8 @@ services:
     build: .
     env_file: .env
     restart: unless-stopped
+    volumes:
+      - data:/data  # часовые пояса пользователей
+
+volumes:
+  data:

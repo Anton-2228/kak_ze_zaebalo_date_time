@@ -1,5 +1,7 @@
 import asyncio
+import os
 import unittest
+from datetime import timedelta
 from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -7,6 +9,8 @@ from unittest.mock import AsyncMock
 from PIL import Image
 
 import main
+
+os.environ["DB_PATH"] = ":memory:"
 
 
 class BotTest(unittest.TestCase):
@@ -31,6 +35,18 @@ class BotTest(unittest.TestCase):
         self.assertEqual(asyncio.run(ask_twice_concurrently()), ["FILE", "FILE"])
         bot.send_animation.assert_awaited_once()
         bot.delete_message.assert_awaited_once_with(42, 7)
+
+    def test_find_zone(self):
+        self.assertEqual(main.find_zone("europe/belgrade"), "Europe/Belgrade")
+        self.assertEqual(main.find_zone("+3"), "Etc/GMT-3")
+        self.assertEqual(main.find_zone(" UTC -5:00 "), "Etc/GMT+5")
+        for junk in ("", "/start tz", "+99", "../../etc/passwd", "Москва"):
+            self.assertIsNone(main.find_zone(junk))
+
+    def test_user_zone_is_stored_per_user(self):
+        main._db().execute("INSERT OR REPLACE INTO zones VALUES (1, 'Etc/GMT-9')")
+        self.assertEqual(main.now_for(1).utcoffset(), timedelta(hours=9))
+        self.assertEqual(main.now_for(2).utcoffset(), main.datetime.now().astimezone().utcoffset())
 
 
 if __name__ == "__main__":

@@ -1,13 +1,22 @@
 import asyncio
 import logging
 import os
+import re
+import sqlite3
 from datetime import datetime
 from functools import cache
 from io import BytesIO
 from pathlib import Path
+from zoneinfo import ZoneInfo, available_timezones
 
-from aiogram import Bot, Dispatcher
-from aiogram.types import BufferedInputFile, InlineQuery, InlineQueryResultCachedGif
+from aiogram import Bot, Dispatcher, F
+from aiogram.types import (
+    BufferedInputFile,
+    InlineQuery,
+    InlineQueryResultCachedGif,
+    InlineQueryResultsButton,
+    Message,
+)
 from PIL import Image, ImageDraw, ImageFont, ImageSequence
 
 HERE = Path(__file__).parent
@@ -18,9 +27,33 @@ MONTHS = (
     "июля", "августа", "сентября", "октября", "ноября", "декабря",
 )
 
+ZONES = {zone.lower(): zone for zone in available_timezones()}
+
 dp = Dispatcher()
 _file_ids: dict[str, str] = {}  # подпись -> file_id уже загруженной гифки
 _upload_lock = asyncio.Lock()
+
+
+@cache
+def _db() -> sqlite3.Connection:
+    db = sqlite3.connect(os.getenv("DB_PATH", "zones.db"), autocommit=True)
+    db.execute("CREATE TABLE IF NOT EXISTS zones (user_id INTEGER PRIMARY KEY, zone TEXT NOT NULL)")
+    return db
+
+
+def find_zone(text: str) -> str | None:
+    """'europe/belgrade' -> 'Europe/Belgrade', '+3' и 'UTC+3' -> 'Etc/GMT-3', всё остальное -> None."""
+    text = text.strip().lower()
+    if m := re.fullmatch(r"(?:utc|gmt)?\s*([+-])\s*(\d{1,2})(?::00)?", text):
+        # У зон Etc/GMT знак перевёрнут: UTC+3 называется Etc/GMT-3.
+        text = f"etc/gmt{'-' if m[1] == '+' else '+'}{int(m[2])}"
+    return ZONES.get(text)
+
+
+def now_for(user_id: int) -> datetime:
+    row = _db().execute("SELECT zone FROM zones WHERE user_id = ?", (user_id,)).fetchone()
+    # Без своей настройки — пояс контейнера (переменная TZ).
+    return datetime.now().astimezone(ZoneInfo(row[0]) if row else None)
 
 
 @cache
@@ -70,7 +103,7 @@ async def file_id_for(text: str, bot: Bot, chat_id: int) -> str:
 
 @dp.inline_query()
 async def on_inline_query(query: InlineQuery, bot: Bot, storage_chat_id: int) -> None:
-    now = datetime.now()  # локальное время контейнера, пояс задаёт переменная TZ
+    now = now_for(query.from_user.id)
     date = f"Как же заебало {now.day} {MONTHS[now.month - 1]}"
     results = [
         InlineQueryResultCachedGif(
@@ -78,7 +111,28 @@ async def on_inline_query(query: InlineQuery, bot: Bot, storage_chat_id: int) ->
         )
         for i, text in enumerate((date, f"{date} {now:%H:%M:%S}"))
     ]
-    await query.answer(results, cache_time=1)
+    await query.answer(
+        results,
+        cache_time=1,
+        is_personal=True,  # иначе Telegram отдаст чужой кэш с чужим часовым поясом
+        button=InlineQueryResultsButton(
+            text=f"Часовой пояс UTC{now:%:z} — изменить", start_parameter="tz"
+        ),
+    )
+
+
+@dp.message(F.chat.type == "private")
+async def on_private_message(message: Message) -> None:
+    if zone := find_zone(message.text or ""):
+        _db().execute("INSERT OR REPLACE INTO zones VALUES (?, ?)", (message.from_user.id, zone))
+        reply = "Готово."
+    else:
+        reply = (
+            "Пришлите свой часовой пояс: смещение от UTC (например, +3) "
+            "или название (например, Europe/Belgrade)."
+        )
+    now = now_for(message.from_user.id)
+    await message.answer(f"{reply}\nПо моим данным, у вас сейчас {now:%H:%M} (UTC{now:%:z}).")
 
 
 if __name__ == "__main__":
